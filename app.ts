@@ -31,30 +31,29 @@ client.once("ready", async () => {
 });
 
 interface Question {
-	q: string | (() => string) | (() => { q: string; a: string });
-	a: string | (() => string);
+	q: string;
+	a: string;
 }
 let currentQuestion: Question | null = null;
-const questions: Question[] = [
-	// { q: "Say hello", a: "hello" },
-	// { q: "Say world", a: "world" },
-	{
-		q: () => {
-			const a = Math.floor(Math.random() * 100);
-			const b = Math.floor(Math.random() * 100);
-			return { q: `What is \`${a} + ${b}\`?`, a: `${a + b}` };
-		},
-		a: "calculated",
+const questions: (() => Question)[] = [
+	() => {
+		const a = Math.floor(Math.random() * 100);
+		const b = Math.floor(Math.random() * 100);
+		return { q: `What is \`${a} + ${b}\`?`, a: `${a + b}` };
 	},
-	{
-		q: () => {
-			const thingToSay = generateSlug(3, { format: "sentence" });
-			return {
-				q: `Say: \`${thingToSay.toLowerCase()}\` in uppercase`,
-				a: thingToSay.toUpperCase(),
-			};
-		},
-		a: "calculated",
+	() => {
+		const thingToSay = generateSlug(3, { format: "sentence" });
+		return {
+			q: `Say: \`${thingToSay.toLowerCase()}\` in uppercase`,
+			a: thingToSay.toUpperCase(),
+		};
+	},
+	() => {
+		const thingToSay = generateSlug(3, { format: "sentence" });
+		return {
+			q: `Say: \`${thingToSay.toUpperCase()}\` in lowercase`,
+			a: thingToSay.toLowerCase(),
+		};
 	},
 ];
 const standings: Record<string, number> = {};
@@ -114,24 +113,12 @@ client.on("messageCreate", async (message) => {
 function askQuestion() {
 	console.log("Asking question ...");
 	const questionN = Math.floor(Math.random() * questions.length);
-	currentQuestion = questions[questionN];
-	let question = typeof currentQuestion.q == "string" ? currentQuestion.q : "?";
-	let answer =
-		typeof currentQuestion.a == "string"
-			? currentQuestion.a
-			: currentQuestion.a();
-	if (typeof currentQuestion.q === "function") {
-		const question_parts = currentQuestion.q();
-		if (typeof question_parts === "object") {
-			question = question_parts.q;
-			answer = question_parts.a;
-		} else if (typeof question_parts === "string") {
-			question = question_parts;
-		}
-	}
-	currentQuestion = { q: question, a: answer };
+	const processingQuestion = questions[questionN];
+	const question_parts = processingQuestion();
+	let { q, a } = question_parts;
+	currentQuestion = { q, a };
 	console.log(`  > ${currentQuestion.q}`);
-	channel.send(question);
+	channel.send(q);
 }
 
 async function saveStandings() {
