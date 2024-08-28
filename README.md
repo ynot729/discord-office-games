@@ -6,3 +6,8 @@ simple games good to play in an office
 
 - copy the `.env.example` and fill out with appropriate credentials
 - `bun start`
+
+## THE List
+
+- make interval random
+- better standings
