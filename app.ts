@@ -111,8 +111,6 @@ client.on('messageCreate', async (message) => {
 		if (currentQuestion) {
 			let isCorrect = currentQuestion.caseInsensitive ? currentQuestion.a.toLowerCase() === providedAnswer.toLowerCase() : currentQuestion.a === providedAnswer;
 			if (isCorrect) {
-				console.log(msgDtls.author.displayName);
-
 				console.log(`Correct answer '${providedAnswer}' from: ${name}`);
 
 				if (!standings[name]) standings[name] = 0;

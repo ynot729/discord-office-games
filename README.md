@@ -10,4 +10,5 @@ simple games good to play in an office
 
 ## THE List
 - make interval random within the params specified without causing a memory leak
-- better standings
+- better standings printout
+- support multiple channels. most likely have to move standings to DB, SQLite would be fine
