@@ -1,11 +1,13 @@
 import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
 import { generateSlug } from 'random-word-slugs';
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildModeration, GatewayIntentBits.GuildMessages] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildModeration, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages] });
 
 const token = process.env.DISCORD_TOKEN;
 const channelId = process.env.CHANNEL_ID;
+const privateChannelId = process.env.PRIVATE_CHANNEL_ID;
 const intervalMinutes = process.env.INTERVAL_MINUTES ? parseInt(process.env.INTERVAL_MINUTES) : 5;
+let persistentStoragePath = './standings.json';
 
 if (!token) throw new Error('ENV needs to have DISCORD_TOKEN');
 if (!channelId) throw new Error('ENV needs to have CHANNEL_ID');
@@ -13,8 +15,16 @@ if (!channelId) throw new Error('ENV needs to have CHANNEL_ID');
 let channel: TextChannel;
 client.once('ready', async () => {
 	console.log('Bot is online!');
-	channel = client.channels.cache.get(channelId) as TextChannel;
-	if (!channel) return console.error('Channel not found!');
+	channel = (await client.channels.fetch(channelId)) as TextChannel;
+	if (privateChannelId) {
+		console.warn('⚠️ Doing DEV mode because ENV has PRIVATE_CHANNEL_ID');
+		channel = (await client.channels.fetch(privateChannelId)) as TextChannel;
+		persistentStoragePath = './standings-dev.json';
+	}
+	if (!channel) {
+		console.error('Channel not found!');
+		throw new Error('Channel not found!');
+	}
 	await loadStanding();
 	// await channel.send("Hello, world!");
 	// sendRandomMessage();
@@ -53,7 +63,7 @@ const standings: Record<string, number> = {};
 async function loadStanding() {
 	try {
 		//@ts-ignore the file might not be there on first run
-		const loadedStandings = await import('./standings.json');
+		const loadedStandings = await import(persistentStoragePath);
 		Object.assign(standings, loadedStandings.default);
 		console.log('Standings loaded!');
 		console.log(standings);
@@ -63,12 +73,12 @@ async function loadStanding() {
 }
 
 client.on('messageCreate', async (message) => {
-	if (message.channel.id === channelId) {
+	if (message.channel.id === channel.id) {
 		const msgDtls = await message.fetch();
 		const providedAnswer = msgDtls.content;
 
 		const name = msgDtls.member?.displayName ?? msgDtls.author.displayName;
-		// console.log(`Message from: ${name}`);
+		// console.log(`Message from: ${name} - ${providedAnswer}`);
 
 		if (name == 'office games') return; // no need to respond when we sent the message
 
@@ -115,7 +125,7 @@ function askQuestion() {
 async function saveStandings() {
 	console.log('Saving standings ...');
 	const fs = await import('fs');
-	fs.writeFileSync('./standings.json', JSON.stringify(standings));
+	fs.writeFileSync(persistentStoragePath, JSON.stringify(standings));
 }
 
 client.login(token);

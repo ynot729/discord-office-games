@@ -1,4 +1,5 @@
 node_modules
 .env
 standings.json
+standings-dev.json
 bun.lockb
