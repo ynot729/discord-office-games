@@ -1,13 +1,13 @@
 # Discord Office Games
-
 simple games good to play in an office
 
-## running
-
+## setup
 - copy the `.env.example` and fill out with appropriate credentials
+- `bun i`
+
+## running
 - `bun start`
 
 ## THE List
-
-- make interval random
+- make interval random within the params specified without causing a memory leak
 - better standings

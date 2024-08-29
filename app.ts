@@ -93,6 +93,7 @@ client.on('messageCreate', async (message) => {
 
 		if (providedAnswer == 'standings') {
 			const standingsMsg = Object.entries(standings)
+				// .sort((a, b) => b[1] - a[1])
 				.map(([name, score]) => `${name}: ${score}`)
 				.join('\n');
 			channel.send('```\n' + standingsMsg + '\n```');
