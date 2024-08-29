@@ -8,7 +8,9 @@ const channelId = process.env.CHANNEL_ID;
 const privateChannelId = process.env.PRIVATE_CHANNEL_ID;
 const intervalMinutes = process.env.INTERVAL_MINUTES ? parseInt(process.env.INTERVAL_MINUTES) : 5;
 const intervalVariance = process.env.INTERVAL_VARIANCE ? parseInt(process.env.INTERVAL_VARIANCE) : 0;
+const rapidFire = process.env.RAPID_FIRE ? parseInt(process.env.RAPID_FIRE) : 1;
 let persistentStoragePath = './standings.json';
+let rapidFireCounter = rapidFire;
 
 if (!token) throw new Error('ENV needs to have DISCORD_TOKEN');
 if (!channelId) throw new Error('ENV needs to have CHANNEL_ID');
@@ -75,13 +77,18 @@ const questions: (() => Question | Promise<Question>)[] = [
 		const resp = await fetch('https://opentdb.com/api.php?amount=1&difficulty=easy&type=multiple').then((res) => res.json() as Promise<TriviaResponse>);
 		if (!resp.results || !Array.isArray(resp.results) || resp.results.length == 0) throw new Error('Invalid response when getting trivia');
 		const question = resp.results[0];
-		let q = question.question.replace(/&quot;/g, '"').replace(/&#039;/g, "'");
+		const sanitize = (str: string) =>
+			str
+				.replace(/&quot;/g, '"')
+				.replace(/&#039;/g, "'")
+				.replace('&amp;', '&');
+		let q = sanitize(question.question);
 		const answers = [question.correct_answer, ...question.incorrect_answers];
 		answers.sort(() => Math.random() - 0.5);
 
 		return {
-			q: `${q}\n` + answers.map((a, i) => `- ${a}`).join('\n'),
-			a: question.correct_answer,
+			q: `${q}\n` + answers.map((a, i) => `- ${sanitize(a)}`).join('\n'),
+			a: sanitize(question.correct_answer),
 			caseInsensitive: true,
 		};
 	},
@@ -122,6 +129,11 @@ client.on('messageCreate', async (message) => {
 
 				msgDtls.react('✅');
 				saveStandings();
+
+				if (rapidFireCounter > 0) {
+					rapidFireCounter--;
+					askQuestion();
+				}
 			} else {
 				msgDtls.react('❌');
 				console.log(`Inorrect answer '${providedAnswer}' != '${currentQuestion.a}' from: ${name}`);
@@ -167,6 +179,7 @@ function initSleepLoop() {
 			let randomTime = Math.floor(Math.random() * intervalVariance) + intervalMinutes;
 			readyToAskOn = new Date().getTime() + randomTime * 60 * 1000;
 			console.log(`Next question in ${randomTime} minutes: ${readyToAskOn}`);
+			rapidFireCounter = rapidFire;
 		}
 		const now = new Date().getTime();
 		if (now >= readyToAskOn) {
