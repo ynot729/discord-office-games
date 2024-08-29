@@ -7,6 +7,7 @@ const token = process.env.DISCORD_TOKEN;
 const channelId = process.env.CHANNEL_ID;
 const privateChannelId = process.env.PRIVATE_CHANNEL_ID;
 const intervalMinutes = process.env.INTERVAL_MINUTES ? parseInt(process.env.INTERVAL_MINUTES) : 5;
+const intervalVariance = process.env.INTERVAL_VARIANCE ? parseInt(process.env.INTERVAL_VARIANCE) : 0;
 let persistentStoragePath = './standings.json';
 
 if (!token) throw new Error('ENV needs to have DISCORD_TOKEN');
@@ -29,7 +30,8 @@ client.once('ready', async () => {
 	// await channel.send("Hello, world!");
 	// sendRandomMessage();
 	askQuestion();
-	setInterval(askQuestion, intervalMinutes * 60 * 1000);
+	// setInterval(askQuestion, intervalMinutes * 60 * 1000);
+	initSleepLoop();
 });
 
 interface Question {
@@ -155,6 +157,23 @@ async function saveStandings() {
 	console.log('Saving standings ...');
 	const fs = await import('fs');
 	fs.writeFileSync(persistentStoragePath, JSON.stringify(standings));
+}
+
+let readyToAskOn;
+function initSleepLoop() {
+	setInterval(() => {
+		if (!readyToAskOn) {
+			//ask the question between 25-35 minutes randomly
+			let randomTime = Math.floor(Math.random() * intervalVariance) + intervalMinutes;
+			readyToAskOn = new Date().getTime() + randomTime * 60 * 1000;
+			console.log(`Next question in ${randomTime} minutes: ${readyToAskOn}`);
+		}
+		const now = new Date().getTime();
+		if (now >= readyToAskOn) {
+			askQuestion();
+			readyToAskOn = null;
+		}
+	}, 5000); // every 5 seconds
 }
 
 client.login(token);
