@@ -39,6 +39,7 @@ client.once('ready', async () => {
 interface Question {
 	q: string;
 	a: string;
+	category: string;
 	caseInsensitive?: true;
 }
 let currentQuestion: Question | null = null;
@@ -46,13 +47,14 @@ const questions: (() => Question | Promise<Question>)[] = [
 	() => {
 		const a = Math.floor(Math.random() * 100);
 		const b = Math.floor(Math.random() * 100);
-		return { q: `What is \`${a} + ${b}\`?`, a: `${a + b}` };
+		return { q: `What is \`${a} + ${b}\`?`, a: `${a + b}`, category: 'simple addition' };
 	},
 	() => {
 		const thingToSay = generateSlug(3, { format: 'sentence' });
 		return {
 			q: `Say: \`${thingToSay.toLowerCase()}\` in uppercase`,
 			a: thingToSay.toUpperCase(),
+			category: 'random uppercase',
 		};
 	},
 	() => {
@@ -60,6 +62,7 @@ const questions: (() => Question | Promise<Question>)[] = [
 		return {
 			q: `Say: \`${thingToSay.toUpperCase()}\` in lowercase`,
 			a: thingToSay.toLowerCase(),
+			category: 'random lowercase',
 		};
 	},
 	async () => {
@@ -81,6 +84,7 @@ const questions: (() => Question | Promise<Question>)[] = [
 			str
 				.replace(/&quot;/g, '"')
 				.replace(/&#039;/g, "'")
+				.replace(/&[lr]dquo;/g, "'")
 				.replace('&amp;', '&');
 		let q = sanitize(question.question);
 		const answers = [question.correct_answer, ...question.incorrect_answers];
@@ -90,6 +94,7 @@ const questions: (() => Question | Promise<Question>)[] = [
 			q: `${q}\n` + answers.map((a, i) => `- ${sanitize(a)}`).join('\n'),
 			a: sanitize(question.correct_answer),
 			caseInsensitive: true,
+			category: 'trivia + ' + question.category,
 		};
 	},
 ];
@@ -125,6 +130,8 @@ client.on('messageCreate', async (message) => {
 				if (!standings[name]) standings[name] = 0;
 				standings[name]++;
 
+				addPoint(channel, name, currentQuestion);
+
 				currentQuestion = null;
 
 				msgDtls.react('✅');
@@ -157,7 +164,7 @@ async function askQuestion() {
 		const processingQuestion = questions[questionN];
 		const question_parts = await processingQuestion();
 		let { q, a } = question_parts;
-		currentQuestion = { q, a, caseInsensitive: question_parts.caseInsensitive };
+		currentQuestion = { q, a, caseInsensitive: question_parts.caseInsensitive, category: question_parts.category };
 		console.log(`  > ${currentQuestion.q}`);
 		channel.send(q);
 	} catch (error) {
