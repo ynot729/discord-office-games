@@ -3,3 +3,4 @@ node_modules
 standings.json
 standings-dev.json
 bun.lockb
+db.sqlite

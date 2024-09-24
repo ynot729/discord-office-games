@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 const DB = new Database('db.sqlite', { create: true });
 
 const createSQL = /* sql */ `CREATE TABLE IF NOT EXISTS points (
-	id TEXT PRIMARY KEY,
+	id INTEGER PRIMARY KEY,
 	createdAt TEXT NOT NULL DEFAULT current_timestamp,
 	channelID TEXT,
 	userName TEXT NOT NULL DEFAULT '',

@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
 import { generateSlug } from 'random-word-slugs';
+import { addPoint, getStandings } from './standings';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildModeration, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages] });
 
@@ -9,7 +10,6 @@ const privateChannelId = process.env.PRIVATE_CHANNEL_ID;
 const intervalMinutes = process.env.INTERVAL_MINUTES ? parseInt(process.env.INTERVAL_MINUTES) : 5;
 const intervalVariance = process.env.INTERVAL_VARIANCE ? parseInt(process.env.INTERVAL_VARIANCE) : 0;
 const rapidFire = process.env.RAPID_FIRE ? parseInt(process.env.RAPID_FIRE) : 1;
-let persistentStoragePath = './standings.json';
 let rapidFireCounter = rapidFire;
 
 if (!token) throw new Error('ENV needs to have DISCORD_TOKEN');
@@ -22,13 +22,11 @@ client.once('ready', async () => {
 	if (privateChannelId) {
 		console.warn('⚠️ Doing DEV mode because ENV has PRIVATE_CHANNEL_ID');
 		channel = (await client.channels.fetch(privateChannelId)) as TextChannel;
-		persistentStoragePath = './standings-dev.json';
 	}
 	if (!channel) {
 		console.error('Channel not found!');
 		throw new Error('Channel not found!');
 	}
-	await loadStanding();
 	// await channel.send("Hello, world!");
 	// sendRandomMessage();
 	askQuestion();
@@ -36,12 +34,6 @@ client.once('ready', async () => {
 	initSleepLoop();
 });
 
-interface Question {
-	q: string;
-	a: string;
-	category: string;
-	caseInsensitive?: true;
-}
 let currentQuestion: Question | null = null;
 const questions: (() => Question | Promise<Question>)[] = [
 	() => {
@@ -100,18 +92,6 @@ const questions: (() => Question | Promise<Question>)[] = [
 ];
 const standings: Record<string, number> = {};
 
-async function loadStanding() {
-	try {
-		//@ts-ignore the file might not be there on first run
-		const loadedStandings = await import(persistentStoragePath);
-		Object.assign(standings, loadedStandings.default);
-		console.log('Standings loaded!');
-		console.log(standings);
-	} catch (error) {
-		console.error('No standings found');
-	}
-}
-
 client.on('messageCreate', async (message) => {
 	if (message.channel.id === channel.id) {
 		const msgDtls = await message.fetch();
@@ -135,7 +115,6 @@ client.on('messageCreate', async (message) => {
 				currentQuestion = null;
 
 				msgDtls.react('✅');
-				saveStandings();
 
 				if (rapidFireCounter > 0) {
 					rapidFireCounter--;
@@ -148,10 +127,7 @@ client.on('messageCreate', async (message) => {
 		}
 
 		if (providedAnswer == 'standings') {
-			const standingsMsg = Object.entries(standings)
-				// .sort((a, b) => b[1] - a[1])
-				.map(([name, score]) => `${name}: ${score}`)
-				.join('\n');
+			const standingsMsg = getStandings(channel);
 			channel.send('```\n' + standingsMsg + '\n```');
 		}
 	}
@@ -170,12 +146,6 @@ async function askQuestion() {
 	} catch (error) {
 		console.error('Unable to ask questions', error);
 	}
-}
-
-async function saveStandings() {
-	console.log('Saving standings ...');
-	const fs = await import('fs');
-	fs.writeFileSync(persistentStoragePath, JSON.stringify(standings));
 }
 
 let readyToAskOn;
