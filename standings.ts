@@ -7,7 +7,7 @@ export function addPoint(channel: TextChannel, name: string, question: Question)
 	let query = db.query('INSERT INTO points (id,createdAt,channelID,userName,category) VALUES ($id,$createdAt,$channelID,$userName,$category)');
 	query.run({
 		$id: null,
-		$createdAt: DateTime.now().toSQL({ includeOffset: false }),
+		$createdAt: DateTime.now().toSQL({ includeOffset: false }), // doing this to user the server's timezone
 		$channelID: channel.id,
 		$userName: name,
 		$category: question.category,
@@ -27,7 +27,7 @@ export function getStandings(channel: TextChannel, type = 'all') {
 					WHERE channelID = $channelID AND createdAt > datetime('now', 'start of day')
 					group by Hour`);
 				let hours = hoursQuery.all({ $channelID: channel.id }) as { Hour: string }[];
-				let hoursSelects = hours.map((h) => `sum(case when strftime('%H',createdAt)='${h.Hour}' then 1 else null end) as '${h.Hour}'`).join(',\n'); // -4 because of timezone
+				let hoursSelects = hours.map((h) => `sum(case when strftime('%H',createdAt)='${h.Hour}' then 1 else null end) as '${h.Hour}'`).join(',\n');
 				let query = db.query(`SELECT userName
 							, ${hoursSelects}
 							, count(id) as Total
@@ -60,7 +60,6 @@ export function getStandings(channel: TextChannel, type = 'all') {
 						GROUP BY userName
 						ORDER BY Total DESC
 						`;
-				console.log(sql);
 				let query = db.query(sql);
 				let results = query.all({ $channelID: channel.id }) as { userName: string; Points: number }[];
 				if (results.length > 0) {
