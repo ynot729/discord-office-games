@@ -27,34 +27,45 @@ export function getStandings(channel: TextChannel, type = 'all') {
 					WHERE channelID = $channelID AND createdAt > datetime('now', 'start of day')
 					group by Hour`);
 				let hours = hoursQuery.all({ $channelID: channel.id }) as { Hour: string }[];
-				let hoursSelects = hours.map((h) => `count(case when strftime('%H',createdAt)='${h.Hour}' then id else null end) as '${h.Hour}'`).join(',\n'); // -4 because of timezone
+				let hoursSelects = hours.map((h) => `sum(case when strftime('%H',createdAt)='${h.Hour}' then 1 else null end) as '${h.Hour}'`).join(',\n'); // -4 because of timezone
 				let query = db.query(`SELECT userName
 							, ${hoursSelects}
-							, count(id) as Points
+							, count(id) as Total
 						FROM points
 						WHERE channelID = $channelID AND createdAt > datetime('now', 'start of day')
 						GROUP BY userName
-						ORDER BY Points DESC
+						ORDER BY Total DESC
 						`);
 				let results = query.all({ $channelID: channel.id }) as { userName: string; Points: number }[];
 				if (results.length > 0) {
-					message.push('Day:');
-					message.push(resultsToTable(results));
+					message.push(resultsToTable(results, 'DAY'));
 				}
 				break;
 			}
 			case 'week': {
-				let query = db.query(`SELECT userName,count(id) as Points
+				const startOfWeek = DateTime.now().startOf('week');
+				let daysQuery = db.query(`select strftime('%d',createdAt) as Day
+					from points
+					WHERE channelID = $channelID AND createdAt > '${startOfWeek.toSQLDate()}'
+					group by Day
+					order by createdAt asc
+					`);
+				let days = daysQuery.all({ $channelID: channel.id }) as { Day: string }[];
+				let daysSelects = days.map((d) => `sum(case when strftime('%d',createdAt)='${d.Day}' then 1 else null end) as '${d.Day}'`).join(',\n');
+				let sql = `SELECT userName
+							,${daysSelects}
+							,count(id) as Total
 						FROM points
-						WHERE channelID = $channelID AND createdAt > datetime('now', 'weekday 0', '-7 days')
+						WHERE channelID = $channelID AND createdAt > '${startOfWeek.toSQLDate()}'
 						GROUP BY userName
-						ORDER BY Points DESC
-						`);
+						ORDER BY Total DESC
+						`;
+				console.log(sql);
+				let query = db.query(sql);
 				let results = query.all({ $channelID: channel.id }) as { userName: string; Points: number }[];
-				message.push('Week:');
-				results.forEach((result) => {
-					message.push(`\t${result.userName}: ${result.Points}`);
-				});
+				if (results.length > 0) {
+					message.push(resultsToTable(results, 'WEEK'));
+				}
 				break;
 			}
 			case 'lifetime': {
@@ -65,10 +76,9 @@ export function getStandings(channel: TextChannel, type = 'all') {
 						ORDER BY Points DESC
 						`);
 				let results = query.all({ $channelID: channel.id }) as { userName: string; Points: number }[];
-				message.push('Lifetime:');
-				results.forEach((result) => {
-					message.push(`\t${result.userName}: ${result.Points}`);
-				});
+				if (results.length > 0) {
+					message.push(resultsToTable(results, 'LIFETIME'));
+				}
 				break;
 			}
 		}
