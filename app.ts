@@ -155,6 +155,7 @@ function initSleepLoop() {
 		if (!readyToAskOn) {
 			//ask the question between 25-35 minutes randomly
 			let randomTime = Math.floor(Math.random() * intervalVariance) + intervalMinutes;
+			// TODO: make the business hours only optional. should it consider timezones?
 			let askTime = new Date(new Date().getTime() + randomTime * 60 * 1000);
 			if(askTime.getHours() >= 17) {  // If after 5pm 
 				if(askTime.getDay() == 5){ // After 5pm on Friday

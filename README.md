@@ -12,3 +12,4 @@ simple games good to play in an office
 - make interval random within the params specified without causing a memory leak
 - better standings printout
 - support multiple channels. most likely have to move standings to DB, SQLite would be fine
+- make business hours only optional
