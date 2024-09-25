@@ -10,9 +10,12 @@
 	"license": "ISC",
 	"dependencies": {
 		"discord.js": "^14.15.3",
+		"luxon": "^3.5.0",
+		"markdown-table": "^3.0.3",
 		"random-word-slugs": "^0.1.7"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.1.9"
+		"@types/bun": "^1.1.9",
+		"@types/luxon": "^3.4.2"
 	}
 }
