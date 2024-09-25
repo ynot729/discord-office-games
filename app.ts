@@ -77,7 +77,8 @@ const questions: (() => Question | Promise<Question>)[] = [
 				.replace(/&quot;/g, '"')
 				.replace(/&#039;/g, "'")
 				.replace(/&[lr]dquo;/g, "'")
-				.replace('&amp;', '&');
+				.replace('&amp;', '&')
+				.trim();
 		let q = sanitize(question.question);
 		const answers = [question.correct_answer, ...question.incorrect_answers];
 		answers.sort(() => Math.random() - 0.5);
@@ -154,6 +155,17 @@ function initSleepLoop() {
 		if (!readyToAskOn) {
 			//ask the question between 25-35 minutes randomly
 			let randomTime = Math.floor(Math.random() * intervalVariance) + intervalMinutes;
+			// TODO: make the business hours only optional. should it consider timezones?
+			let askTime = new Date(new Date().getTime() + randomTime * 60 * 1000);
+			if(askTime.getHours() >= 17) {  // If after 5pm 
+				if(askTime.getDay() == 5){ // After 5pm on Friday
+					randomTime+=3780; // wait 2 days and 15 hours (Mon 8am)
+				} else if(askTime.getDay() == 6){ // After 5pm on Saturday -- shouldn't be necessary
+					randomTime+=2340; // wait 1 days and 15 hours (Mon 8am)
+				} else { // After 5pm not Friday or Saturday
+					randomTime+=900; // wait 15 hours (Next day 8am)
+				}
+			}
 			readyToAskOn = new Date().getTime() + randomTime * 60 * 1000;
 			console.log(`Next question in ${randomTime} minutes: ${readyToAskOn}`);
 			rapidFireCounter = rapidFire;
